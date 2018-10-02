@@ -3,13 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\PurchaseOrderItems;
-use App\OrderPeriod;
 use App\PurchaseOrder;
-use App\Customer;
 use Illuminate\Http\Request;
-use \DB;
-use App\Transform;
-use App\Products;
 use Illuminate\Support\Facades\Input;
 use Carbon\Carbon;
 
@@ -49,6 +44,7 @@ class OrderController extends Controller
                 ]
             ],404);
         }
+
         return response()->json([
             'Orders' => [
                 $orders
@@ -76,10 +72,10 @@ class OrderController extends Controller
 
 
             return response()->json([
-                'Message' => 'Ordered.'
+                'Message' => 'The items has been ordered.'
             ]); 
         }
-        return response()->json('cut_off');
+        return response()->json('Cut off day!');
     }
 
     /**
@@ -89,20 +85,20 @@ class OrderController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, $id, PurchaseOrder $order)
     {        
-        $orders = Input::get('Orders');
-
-        $purchase_order_items = Input::get('Orders.items');
-
+        $order = PurchaseOrder::find($id);
+        $purchase_order_items = Input::get('Orders.items.*');
+        
         foreach ($purchase_order_items as $items) {
-            PurchaseOrderItems::where('purchase_order_id', $id)->update($items);
-        }
-        PurchaseOrder::find($id)->update($orders);
 
+            $order_item = PurchaseOrderItems::where('purchase_order_id', $id)->update($items);
+        }
+        $order->update(Input::get('Orders'));
+        
         return response()->json([
-            'Message' => 'Okiroo'
-        ]);
+            'Message' => 'The order is successfully updated'
+        ],200);
     }
 
     /**
@@ -115,10 +111,19 @@ class OrderController extends Controller
     {
         //
         $order = PurchaseOrder::find($id);
-        PurchaseOrderItems::where('purchase_order_id', $id)->delete();
+
+        if(!$order){
+            
+            return response()->json([
+                'Error' => [
+                    'Message' => 'Can not be deleted. Order does not exist'
+                ]
+            ],404);
+        }
+        $item = PurchaseOrderItems::where('purchase_order_id', $id)->delete();
         $order->delete();
 
-         return response()->json('Order removed successfully',200);
+        return response()->json('Order removed successfully',200);
     }
 
     public function count(){
@@ -128,8 +133,12 @@ class OrderController extends Controller
 
 
     public function addItems($purchase_order_items){
+
         foreach ($purchase_order_items as $items) {
             PurchaseOrderItems::create($items);
-        }        
+        }
     }
+    
 }
+
+
